@@ -34,6 +34,23 @@ struct hash_pair {
   }
 };
 
+void recurse(Node* node, stack<Node*> s, int startX, int startY) {
+  if(node->prev) {
+    s.push(node);
+    recurse(node->prev, s, startX, startY);
+  } else {
+    Node *temp = new Node();
+    temp->x = startX;
+    temp->y = startY;
+    s.push(temp);
+
+    while(!s.empty()) {
+      cout << "{" << s.top()->x << "," << s.top()->y << "}" << (s.size() - 1 == 0 ? "" : ",");
+      s.pop();
+    }
+  }
+}
+
 void dijMazeSolver(vector<vector<int>> maze, int startX, int startY) {
   // Node start info
   Node* source = new Node();
@@ -50,8 +67,9 @@ void dijMazeSolver(vector<vector<int>> maze, int startX, int startY) {
 
   q.push(source);
 
+  bool found = false;
   // While theres still stuff to explore
-  while(!q.empty()) {
+  while(!found) {
     // Explore and pop the top node
     Node* node = q.top();
     q.pop();
@@ -66,7 +84,7 @@ void dijMazeSolver(vector<vector<int>> maze, int startX, int startY) {
     
     // If the node is the goal
     if(maze[x][y] == 2) {
-     // Do something
+     found = true;
     }
 
     // Go through each direction
@@ -74,69 +92,28 @@ void dijMazeSolver(vector<vector<int>> maze, int startX, int startY) {
       int nx = x + directions[i].first;
       int ny = y + directions[i].second;
   
-      // If not out of bounds
-      if(nx < 0 || ny < 0 || nx >= maze.size() || ny >= maze[0].size()) continue;
+      // If not out of bounds or not wall
+      if(nx >= 0 && ny >= 0 && nx < maze.size() && ny < maze[0].size() && maze[nx][ny] != 1 && m.find({nx,ny}) == m.end()) {
+    // Create a new node
+    Node* newNode = new Node();
+    newNode->x = nx;
+    newNode->y = ny;
+    // Set distance to prev + 1
+    newNode->dist = distance + 1;
+    // Set prev to current node
+    newNode->prev = node;
 
-      // If not visited
-      if(m.find({x,y}) != m.end()) continue;
-      
-      // If not a wall
-      if(maze[nx][ny] == 0) {
-        // Create a new node
-        Node* newNode = new Node();
-        newNode->x = nx;
-        newNode->y = ny;
-        // Set distance to prev + 1
-        newNode->dist = distance + 1;
-        // Set prev to current node
-        newNode->prev = node;
-
-        // Test to see if already in priority queue
-        bool inQueue = false;
-        // Holds nodes in queue incase we need to replace a node
-        vector<Node*> temp;
-        // Queue find if element is in queue
-        priority_queue<Node*, vector<Node*>, Compare> q2;
-        // q2 has all elements from q
-        q2 = q;
-        // Goes until q2 is empty
-        while(!q2.empty()) {
-          // Saves the top
-          Node* top = q2.top();
-          q2.pop();
-          // If its the element we're looking for
-          if(top->x == nx && top->y == ny) {
-            inQueue = true;
-          // Else add it to the vector
-          } else {
-            temp.push_back(top);
-          }
-        }
-
-        // If after search it wasnt in queue
-        if(!inQueue) {
-          // Push the new node
-          q.push(newNode);
-          // If it was in the queue
-        } else {
-          // Add all elements from the vector to the queue
-          for(int i = 0; i < temp.size(); i++) {
-            q2.push(temp[i]);
-            // Add the new updated node
-            q2.push(newNode);
-            // Swap the values of q and q2
-            swap(q, q2);
-          }
-        }
-      }
+    q.push(newNode);
     }
   }
-  for(auto it : m) {
-        cout << "{" << it.first.first << "," << it.first.second << "}";
-      }
 }
-
-
+  for(auto it : m) {
+    if(maze[it.first.first][it.first.second] == 2) {
+      stack<Node*> s;
+      recurse(it.second, s, startX, startY);
+    }  
+  }
+}
 
 int main() {
   vector<vector<int>> maze = {
@@ -154,4 +131,5 @@ int main() {
 int startY = 0, startX = 0;
 
   dijMazeSolver(maze, startY, startX);
+  return 0;
 }
