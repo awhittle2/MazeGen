@@ -1,0 +1,176 @@
+#include "vector"
+#include <algorithm>
+#include <iostream>
+#include <utility>
+#include <queue>
+#include <climits>
+#include <set>
+#include <bits/stdc++.h>
+
+using namespace std;
+
+struct Node {
+  int x, y;
+  int dist;
+  Node* prev;
+};
+
+struct Compare {
+  bool operator()(const Node* a, const Node* b) {
+    return a->dist > b->dist;
+  }
+};
+
+struct hash_pair {
+  template<class T1, class T2>
+  size_t operator()(const pair<T1, T2>& p) const {
+    auto hash1 = hash<T1>{}(p.first);
+    auto hash2 = hash<T2>{}(p.second);
+  
+    if(hash1 != hash2) {
+      return hash1 ^ hash2;
+    }
+    return hash1;
+  }
+};
+
+vector<Node*> getNeighbors(vector<vector<int>> maze, unordered_map<pair<int,int>, Node*, hash_pair> m, Node* node) {
+  vector<Node*> neighbors;
+
+  if((node->x + 1) >= 0 && (node->x + 1 < maze.size()) && maze[node->x+1][node->y] != 1 && m.find({node->x+1, node->y}) == m.end()) {
+    Node* newN = new Node();
+    newN->x = node->x + 1;
+    newN->y = node->y;
+    neighbors.push_back(newN);
+  }
+  
+  if(node->x - 1 >= 0 && node->x - 1 < maze.size() && maze[node->x-1][node->y] != 1 && m.find({node->x-1, node->y}) == m.end()) {
+    Node* newN = new Node();
+    newN->x = node->x - 1;
+    newN->y = node->y;
+    neighbors.push_back(newN);
+  }
+  
+  if(node->y + 1 >= 0 && node->y + 1 < maze.size() && maze[node->x][node->y+1] != 1 && m.find({node->x, node->y+1}) == m.end()) {
+    Node* newN = new Node();
+    newN->x = node->x;
+    newN->y = node->y + 1;
+    neighbors.push_back(newN);
+  }
+  
+  if(node->y - 1 >= 0 && node->y - 1 < maze.size() && maze[node->x][node->y-1] != 1 && m.find({node->x, node->y-1}) == m.end()) {
+    Node* newN = new Node();
+    newN->x = node->x;
+    newN->y = node->y - 1;
+    neighbors.push_back(newN);
+  }
+  
+  return neighbors;
+}
+
+int getDistance(Node *a, Node *b) {
+  float distX = abs(a->x - b->x);
+  float distY = abs(a->y - b->y);
+  distX = pow(distX, 2);
+  distY = pow(distY, 2);
+  float result = distX + distY;
+  result = sqrt(result);
+  return result;
+}
+
+void recurse(Node* node, stack<Node*> s, int startX, int startY) {
+  if(node->prev) {
+    s.push(node);
+    recurse(node->prev, s, startX, startY);
+  } else {
+    Node *temp = new Node();
+    temp->x = startX;
+    temp->y = startY;
+    s.push(temp);
+
+    while(!s.empty()) {
+      cout << "{" << s.top()->x << "," << s.top()->y << "}" << (s.size() - 1 == 0 ? "" : ",");
+      s.pop();
+    }
+  }
+}
+
+void aStarMazeSolver(vector<vector<int>> maze, int startX, int startY) {
+  // Node start info
+  Node* source = new Node();
+  source->x = startX;
+  source->y = startY;
+
+  Node* goal = new Node();
+
+  // Search for the goal node since that will have a distance of 0
+  for(int i = 0; i < maze.size(); i++) {
+    for(int j = 0; j < maze[0].size(); j++) {
+      if(maze[i][j] == 2) {
+        // Node goal info
+        goal->x = i;
+        goal->y = j;
+        // Distance at 0 since it is the goal
+        goal->dist = 0;
+      }
+    }
+  }
+
+  priority_queue<Node*, vector<Node*>, Compare> q;
+  unordered_map<pair<int,int>, Node*, hash_pair> m;
+  bool found = false;
+  
+  source->dist = getDistance(source, goal);
+
+  q.push(source);
+
+  while(!found) {
+    Node* node = q.top();
+    q.pop();
+
+    int x = node->x;
+    int y = node->y;
+    int distance = node->dist;
+
+    m[{x,y}] = node;
+
+    if(maze[x][y] == 2) {
+      found = true;
+    }
+
+    vector<Node*> neighbors = getNeighbors(maze,m,node);
+
+    for(int i = 0; i < neighbors.size(); i++) {
+      Node* current = neighbors[i];
+      current->dist = getDistance(current,goal);
+      current->prev = node;
+
+      q.push(current);
+    }
+  }
+
+  for(auto it : m) {
+    if(maze[it.first.first][it.first.second] == 2) {
+      stack<Node*> s;
+      recurse(it.second, s, startX, startY);
+    }  
+  }
+}
+
+int main() {
+  vector<vector<int>> maze = {
+        {0,0,0,0,0,0,1,1,1,0},
+        {0,1,0,1,0,1,0,1,0,0},
+        {1,0,0,1,0,0,0,0,0,1},
+        {0,0,1,1,0,1,1,0,1,0},
+        {0,1,1,0,0,1,0,0,1,0},
+        {1,0,0,0,1,0,1,0,1,0},
+        {0,1,0,1,0,0,0,0,0,0},
+        {0,0,0,0,1,0,1,1,0,1},
+        {1,0,1,0,0,1,0,0,0,0},
+        {0,2,0,1,0,0,1,0,1,0}
+    };
+int startY = 0, startX = 0;
+
+  aStarMazeSolver(maze, startY, startX);
+}
