@@ -9,229 +9,179 @@
 
 using namespace std;
 
-// Function to pick a random open cell
+// Generates a pair of random x,y coordinates in the maze where the cell at those coordinates is empty
 pair<int,int> randomInd(vector<vector<int>> maze) {
   bool isValid = false;
   int x = 0, y = 0;
   while(!isValid) {
-    // Random x
-    x = rand() % maze.size();
-    // Random y
+    x = rand() % maze.size(); // Generates a random number between 0 and the size of the maze
     y = rand() % maze[0].size();
 
-    // If the cell is not a wall
-    if(maze[x][y] == 0) {
+    if(maze[x][y] == 0) { // Check if the cell at the generated coordinates is empty
       isValid = true;
     }
   }
-  // Return the coords
   return {x,y};
 }
 
-// Function to pick a random valid direction
+// Generates two random coordinates representing a wall and the cell on the other side of that wall from a given cell
 vector<pair<int,int>> randomDir(vector<vector<int>> maze, pair<int,int> cell) {
-  // Returns two cells
   vector<pair<int,int>> output;
-  // Valid list of direction
-  vector<pair<int,int>> directions = {{1,0},{0,1},{-1,0},{0,-1}};
+  vector<pair<int,int>> directions = {{1,0},{0,1},{-1,0},{0,-1}}; // Vector of possible directions to check (right, down, left, up)
   pair<int,int> wall;
   pair<int,int> cellB;
 
-  // Picks a random index
-  int randInd = rand() % directions.size();
-  // Sets the wall to be the cell plus the direction
-  wall = {cell.first + directions[randInd].first, cell.second + directions[randInd].second};
+  int randInd = rand() % directions.size(); // Generate a random index to pick a random direction from the vector of directions
+  wall = {cell.first + directions[randInd].first, cell.second + directions[randInd].second}; // Calculate the coordinates of the wall based on the direction
 
-  // If the coordinates are out of bounds try again
-  if(wall.first < 0 || wall.first >= maze.size() || wall.second < 0 || wall.second >= maze.size()) return randomDir(maze, cell);
+  if(wall.first < 0 || wall.first >= maze.size() || wall.second < 0 || wall.second >= maze.size()) return randomDir(maze, cell); // Recursively call this function if the wall is out of bounds
+  cellB = {wall.first + directions[randInd].first, wall.second + directions[randInd].second}; // Calculate the coordinates of the cell on the other side of the wall
 
-  // Sets the cell b to be the wall plus the direction
-  cellB = {wall.first + directions[randInd].first, wall.second + directions[randInd].second};
+  if(cellB.first < 0 || cellB.first >= maze.size() || cellB.second < 0 || cellB.first >= maze.size()) return randomDir(maze, cell); // Recursively call this function if the cell is out of bounds
 
-  // If the coordinates are out of bounds, try again
-  if(cellB.first < 0 || cellB.first >= maze.size() || cellB.second < 0 || cellB.first >= maze.size()) return randomDir(maze, cell);
-
-  // Return the two cells
   output.push_back(wall);
   output.push_back(cellB);
   return output;
 }
 
-// Function to union two distinct sets
+// Changes the group that a given cell belongs to, and updates the maze and group number matrices accordingly
 void reGroup(vector<vector<int>>& maze, vector<vector<int>>& num, pair<int,int> cell, pair<int,int> wall, pair<int,int> cellB) {
   int newGroup = 0;
   int oldGroup = 0;
 
-  // If cell a has a higher number, set it to be the new group
+  // Determine which group the cell belongs to
   if(num[cell.first][cell.second] > num[cellB.first][cellB.second]) {
     newGroup = num[cell.first][cell.second];
     oldGroup = num[cellB.first][cellB.second];
-    // If cell b has a higher number, set it to be the new group
   } else if(num[cellB.first][cellB.second] > num[cell.first][cell.second]){
     newGroup = num[cellB.first][cellB.second];
     oldGroup = num[cell.first][cell.second];
-    // If cell a is equal to cell b
   } else {
-    // Dont do anything and return
     return;
   }
 
-  // Loops through all of the sets
+  // Update the group number matrix with the new group number
   for(int i = 0; i < num.size(); i++) {
     for(int j = 0; j < num[0].size(); j++) {
-      // If the current cell is not a wall and is equal to the old group, change it to the new group
       if(num[i][j] == oldGroup && num[i][j] != -1) num[i][j] = newGroup;
     }
   }
-  
-  // Set the wall to the new group
+
+  // Update the maze and group number matrices with the new wall and updated group number
   num[wall.first][wall.second] = newGroup;
-  // Open the wall in the maze
   maze[wall.first][wall.second] = 0;
 }
 
-// Function to loop through all sets and make sure they are equivalent
+// Check if the maze is perfect, i.e. all cells belong to the same group and there are no isolated cells
 bool isPerfectMaze(vector<vector<int>> num, int count) {
-  // Loops through all groups
   for(int i = 0; i < num.size(); i++) {
     for(int j = 0; j < num.size(); j++) {
-      // If it isnt a wall or not equal to the last number it is not a perfect maze
-      if(num[i][j] != -1 && num[i][j] != count) return false;
+      if(num[i][j] != -1 && num[i][j] != count) return false; // Return false if a cell does not belong to the correct group
     }
   }
   return true;
 }
 
-// Function to check if cell b is a wall or not
+// Check if the cell on the other side of the wall is connected to the maze
 bool isConnected(vector<vector<int>> maze, pair<int,int> cellB) {
-  // If cell b isnt a wall then the wall connects two cells
-  if(maze[cellB.first][cellB.second] == 0) return true;
+  if(maze[cellB.first][cellB.second] == 0) return true; // Return true if the cell is connected
   return false;
 }
 
+// Recursively generate the maze
 void krusMaze(vector<vector<int>>& maze, vector<vector<int>>& num, int count) {
-  // If not perfect maze
-  if(!isPerfectMaze(num, count)) {
-    // Get random index for starting cell
-   pair<int,int> cell = randomInd(maze);
-    
-    // Get random direction
-    vector<pair<int,int>> output = randomDir(maze, cell);
+  if(!isPerfectMaze(num, count)) { // Stop recursion if the maze is perfect
+   pair<int,int> cell = randomInd(maze); // Generate random coordinates for a cell in the maze
+
+    vector<pair<int,int>> output = randomDir(maze, cell); // Generate coordinates for the wall and the cell on the other side of the wall
     pair<int,int> wall = output[0];
     pair<int,int> cellB = output[1];
 
-    // If not a wall try again
-    if(maze[wall.first][wall.second] == 0) return krusMaze(maze, num, count);
+    if(maze[wall.first][wall.second] == 0) return krusMaze(maze, num, count); // Recursively call this function if the wall is already present in the maze
 
-    // If the wall connects two cells
-    if(isConnected(maze, cellB)) {
-      // Union one of the two sets
+    if(isConnected(maze, cellB)) { // If the cell on the other side of the wall is connected to the maze, add the wall and update the group number
       reGroup(maze, num, cell, wall, cellB);
     }
 
-    // Run the function again
-    krusMaze(maze, num, count);
-  } else { // If maze is perfect return
+    krusMaze(maze, num, count); // Recursively call this function to continue generating the maze
+  } else {
     return;
   }
 }
 
-// Function to set the goal inside of the maze
+// Set the goal cell in the maze
 void setGoal(vector<vector<int>>& maze) {
-  bool isSet = false;
+  bool isSet = false; // Flag to track if the goal has been set
   while(!isSet) {
-    // Random x
-    int x = rand() % maze.size();
-    // Random y
+    int x = rand() % maze.size(); // Generate random coordinates for the goal cell
     int y = rand() % maze[0].size();
 
-    // If the coords is not a wall
-    if(maze[x][y] != 1) {
-      // Set it to be the goal
-      maze[x][y] = 2;
+    if(maze[x][y] != 1) { // Set the goal cell if it is not a wall
+      maze[x][j] = 2;
       isSet = true;
     }
   }
 }
 
-// Function to determine PacMans starting position
+// Set the starting position of Pac-Man in the maze
 pair<int,int> setPacMan(vector<vector<int>> maze) {
-  bool isSet = false;
+  bool isSet = false; // Flag to track if the starting position has been set
   while(!isSet) {
-    // Random x
-    int x = rand() % maze.size();
-    // Random y
+    int x = rand() % maze.size(); // Generate random coordinates for the starting position
     int y = rand() % maze[0].size();
 
-    // If the coords are not a wall or the goal
-    if(maze[x][y] != 1 && maze[x][y] != 2) {
+    if(maze[x][y] != 1 && maze[x][y] != 2) { // Set the starting position if it is not a wall or the goal
       isSet = true;
-      // Return the coordinates
       return {x,y};
     }
   }
   return {};
 }
 
+// Generate a Kruskal's maze and set the goal and starting position of Pac-Man
 void krusMazeGenerator(vector<vector<int>>& maze) {
-  // Random seed generator to randomize the direction
   unsigned seed = chrono::system_clock::now().time_since_epoch().count();
-  srand(seed);
+  srand(seed); // Initialize random seed using system clock
   
-  // Vector to keep track of the different sets
-  vector<vector<int>> num(maze.size(), vector<int>(maze[0].size(), -1));
-  // First set will be 0
+  vector<vector<int>> num(maze.size(), vector<int>(maze[0].size(), -1)); // Create a grid with the same dimensions as the maze and initialize all elements to -1
   int count = -1;
   
-  // Loops through the entire maze
   for(int i = 0; i < maze.size(); i+=2) {
     for(int j = 0; j < maze[0].size(); j+=2) {
-      // If the row and column is odd
-      if(i%2 == 0 && j%2 == 0) {
-        // Open the wall
-        maze[i][j] = 0;
-        // Assign a unique group
-        count = count + 1;
-        num[i][j] = count;
+      if(i%2 == 0 && j%2 == 0) { // If the current cell is on an even row and column
+        maze[i][j] = 0; // Set the cell as part of the maze
+        count = count + 1; // Increment the group count
+        num[i][j] = count; // Set the cell's group number to the current count
       }
     }
   }
-
-  // Function to create the maze recursively
+  
   krusMaze(maze, num, count);
-
-  // Function to set the goal in the maze
-  setGoal(maze);
-  // Function to find the starting position for pacman
-  pair<int,int> starting = setPacMan(maze);
-  // Outputs to txt file
-  freopen("output.txt","w",stdout);
-  cout << "Pacman's starting position: X : " << starting.first << "   Y: " << starting.second << "\n\n";
-  fclose(stdout);
+  
+  setGoal(maze); // Place the goal (2) in the maze
+  pair<int,int> starting = setPacMan(maze); // Randomly choose a starting position for Pac-Man in the maze
+  freopen("output.txt","w",stdout); // Open output file in write mode
+  cout << "Pacman's starting position: X : " << starting.first << "   Y: " << starting.second << "\n\n"; // Print Pac-Man's starting position
+  fclose(stdout); // Close output file
 }
 
 int main() {
-  // N MUST BE ODD FOR THIS ALGO TO WORK SINCE EDGES ARE REPRESENTED BY THE WALLS
   int n = 11;
-  // Vector to hold the maze
-  vector<vector<int>> maze(n, vector<int>(n,1));
+  vector<vector<int>> maze(n, vector<int>(n,1)); // Initialize a grid of size 11x11 with all cells set as walls (1)
 
-  krusMazeGenerator(maze);
+  krusMazeGenerator(maze); // Generate the maze
 
-  // Print maze
-  // Outputs to txt file
-  freopen("output.txt","w",stdout);
+  freopen("output.txt","w",stdout); // Open output file in write mode
   cout << "{";
   for(int i = 0; i < maze.size(); i++) {
     cout << "{";
     for(int j = 0; j < maze.size(); j++) {
-      cout << maze[i][j] << (j == maze[0].size() - 1 ? "" : ",");
+      cout << maze[i][j] << (j == maze[0].size() - 1 ? "" : ","); // Print the maze to output file
     }
     cout << "}" << (i == maze.size() - 1 ? "" : ",") << "\n";
   }
   cout << "}";
-  fclose(stdout);
+  fclose(stdout); // Close output file
 
-  // Close program
   return 0;
 }
