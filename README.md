@@ -50,7 +50,3 @@ directory. Click the Run button at the top right of the Godot Engine editor to r
 ## Contributing
 
 If you would like to contribute to this code, please fork the repository and submit a pull request.
-
-## License
-
-This code is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
